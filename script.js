@@ -1,61 +1,64 @@
 class Game {
-  init = () => {
+  init = (rows, cols) => {
+    this.rows = rows;
+    this.cols = cols;
     this.world = document.querySelector('#world');
+    this.infos = document.querySelector('#infos');
     this.generation = 0;
-    this.previousPopulation = [];
-    this.generatePopulation(2, 2);
+
+    this.generatePopulation();
     var interval = setInterval(() => {
-      const pps = this.previousPopulation.map(el => el.status);
-      const ps = this.population.map(el => el.status);
-      if(pps != ps) {
         this.live();
-      } else {
-        clearInterval(interval);
-      }
+        // clearInterval(interval);
     }, 100);
   }
 
-  generatePopulation = (cols, rows) => {
+  generatePopulation = () => {
     this.population = [];
-    for(let i = 0; i < rows; i++) {
-      for(let j = 0; j < cols; j++) {
+    for(let i = 0; i < this.rows; i++) {
+      const row = this.createRow();
+      for(let j = 0; j < this.cols; j++) {
+        const cell = this.createCell(row);
         this.population.push({
-          id: i * cols + j,
-          row: i,
           col: j,
-          status: Math.random() > 0.5 ? true : false
+          row: i,
+          alive: Math.random() > 0.5 ? true : false,
+          element: cell
         });
       }
     }
 
-    this.generateGrid(cols, rows);
     this.render();
   }
-  
-  generateGrid = (cols, rows) => {
-    for(let i = 0; i < rows; i++) {
-      const ul = document.createElement('ul');
-      this.world.appendChild(ul);
-      for(let j = 0; j < cols; j++) {
-        const li = document.createElement('li');
-        li.classList.add('cell');
-        // li.innerHTML = i * cols + j;
-        ul.appendChild(li);
 
-        this.population[i * cols + j].element = li;
-      }
-    }
+  createRow = () => {
+    const ul = document.createElement('ul');
+    this.world.appendChild(ul);
+    return ul;
+  }
+  createCell = row => {
+    const li = document.createElement('li');
+    row.appendChild(li);
+    return li;
+  }
+
+  getRandomColor = () => {
+    const color = Math.floor(Math.random() * 360);
+
+    return `hsl(${color}, 100%, 50%)`;
   }
 
   render = () => {
     this.population.forEach(cell => {
-      if(cell.status) {
+      if(cell.alive) {
         cell.element.classList.add('alive');
+        // cell.element.style.background = this.getRandomColor();
       } else {
         cell.element.classList.remove('alive');
+        // cell.element.style.background = null;
       }
     });
-    document.querySelector('#infos').innerHTML = "Geração: " + this.generation;
+    this.infos.innerHTML = `Geração: ${this.generation}`;
     this.generation ++;
   }
 
@@ -65,37 +68,41 @@ class Game {
       const neighboors = this.getNeighboors(cell);
       let aliveNeighboors = 0
       neighboors.forEach(neighboor => {
-        if(neighboor.status) {
+        if(neighboor.alive) {
           aliveNeighboors++;
         }
       });
 
-      if(cell.status && (aliveNeighboors < 2 || aliveNeighboors > 3)) {
-        populationCopy[index].status = false;
+      if(cell.alive && (aliveNeighboors < 2 || aliveNeighboors > 3)) {
+        populationCopy[index].alive = false;
       }
       if(!cell.status && aliveNeighboors == 3) {
-        populationCopy[index].status = true;
+        populationCopy[index].alive = true;
       }
     });
-    this.previousPopulation = [...this.population];
+    
     this.population = [...populationCopy];
     this.render();
   }
 
-  getNeighboors = (person) => {
-    const neighboors = this.population.filter(cell => {
-      const north = cell.row == person.row - 1 && cell.col == person.col;
-      const south = cell.row == person.row + 1 && cell.col == person.col;
-      const west = cell.row == person.row && cell.col == person.col - 1;
-      const east = cell.row == person.row && cell.col == person.col + 1;
-      const northeast = cell.row == person.row - 1 && cell.col == person.col + 1; 
-      const southeast = cell.row == person.row + 1 && cell.col == person.col + 1; 
-      const southwest = cell.row == person.row + 1 && cell.col == person.col - 1; 
-      const northwest = cell.row == person.row - 1 && cell.col == person.col - 1;
+  getNeighboors = (cell) => {
+    const top = cell.row - 1 > 0 ? cell.row - 1 : undefined;
+    const bottom = cell.row + 1 <= this.rows ? cell.row + 1 : undefined;
+    const left = cell.col - 1 > 0 ? cell.col - 1 : undefined;
+    const right = cell.col + 1 <= this.cols ? cell.col + 1 : undefined;
 
-      return north || south || west || east || northeast || southeast || southwest || northwest;
-    });
+    const north = this.population[(top) * this.cols + (cell.col)];
+    const south = this.population[(bottom) * this.cols + (cell.col)];
+    const west = this.population[(cell.row) * this.cols + (left)];
+    const east = this.population[(cell.row) * this.cols + (right)];
+    const northeast = this.population[(top) * this.cols + (right)];
+    const southeast = this.population[(bottom) * this.cols + (right)];
+    const southwest = this.population[(bottom) * this.cols + (left)];
+    const northwest = this.population[(top) * this.cols + (left)];
 
+    const neighboors = [north, south, west, east, northeast, southeast, southwest, northwest].filter(el => typeof el != 'undefined');
     return neighboors;
   }
 }
+
+// li.innerHTML = aRow * cols + aCol;
